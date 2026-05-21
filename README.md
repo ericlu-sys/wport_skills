@@ -1,66 +1,84 @@
-# Shared Cursor Skills
+# wport-skills (Meta Repository)
 
-Shared [Cursor Agent Skills](https://cursor.com/docs) for CLI and platform workflows. Teammates clone this repo and open it (or add it as a project) so agents can load project skills from `.cursor/skills/`.
+> **狀態變更**：所有 `SKILL.md` 已於 2026-05 遷移至 [`prd/.claude/`](../prd/.claude)。
+> 此 repo 現在只保留**設計哲學**與**架構規範**文件，不再放置可執行 skill。
 
-## Setup
+---
 
-1. Clone this repository.
-2. Open the repo root in Cursor (or symlink/copy `.cursor/skills` into another project if your team prefers a monorepo layout).
-3. In chat, reference a skill by name (e.g. `google-cli`) or describe the task; Cursor discovers skills from `.cursor/skills/<name>/SKILL.md`.
+## 為什麼留這個 repo？
 
-## Available skills
+Skill 檔案搬到了實際使用它們的專案（`prd/`），但「**為什麼要這樣寫 skill**」這件事，仍然需要一個跨專案的中央文件。這個 repo 就是負責回答這類問題：
 
-| Skill | Use when |
-|-------|----------|
-| `google-cli` | `gcloud`, Google Sheets API, ADC / scopes |
-| `github-cli` | `gh` for PRs, issues, runs, releases |
-| `cloudflare-wrangler` | Wrangler, Workers vs Pages deploy |
-| `cloudinary-cli` | `cld`, upload, background removal |
-| `obsidian-cli` | Obsidian URI / `obsidian-cli`, open vault/notes, create notes (app must be running) |
+- 哪些東西該寫成 skill？哪些不該？
+- Executor 與 Generator 的分界線在哪？
+- Token 成本、幻覺風險、live web search 的取捨原則？
 
-## 為什麼要做這份 Skill Repo？（Design Philosophy）
+如果你只是要**使用** skill，去 [`prd/.claude/`](../prd/.claude)；如果你要**寫新的** skill，先讀這裡。
 
-既然 AI 已經知道很多 CLI 用法，為什麼不直接把官方幾千頁的 `gcloud` / `gh` / `wrangler` 文件全部塞給它，或讓它每次去爬官網？因為在實務上會踩到三個現實成本。
+---
 
-### 1) Context Window 是有成本的
+## Skill 兩大分類
 
-LLM 的脈絡長度雖然很大，但**吞下去的字越多，代價越高**：
+| 分類 | 命名前綴 | 核心目的 | YAML 重心 | 內文重心 |
+|------|---------|---------|----------|---------|
+| 🛠️ **Executors** | `exec-*` | 教 AI 正確下指令、不踩資安紅線 | `gcloud`, `gh`, `deploy`, `run command` | 程式碼區塊、Troubleshooting 對照表 |
+| 🧠 **Generators** | `gen-*` | 教 AI 像大師一樣思考、不吐垃圾 | `PRD`, `Business Logic`, `Edge Case` | 思維鏈引導、標準模板、Checklist |
 
-- **Token 成本爆炸**：input tokens 直接計費。把整本 CLI 手冊塞進每次 prompt，跑一個「讀試算表」都要付出不成比例的費用，產品研發預算扛不住。
-- **延遲變長**：脈絡越厚，AI 推理越慢。本來 2 秒能完成的指令，可能拖成 30 秒，DX（開發者體驗）會被摧毀。
+完整撰寫規範見 [`docs/architecture.md`](docs/architecture.md)。
 
-### 2) 資訊過載會誘發幻覺（Needle in a Haystack）
+---
 
-當雜訊太多，AI 反而抓不到關鍵：
+## 當前 Skill 索引（位於 `prd/.claude/`）
 
-- 一個操作可能有 5 種進階做法（其中多數是給大型機房或跨國場景），AI 會開始糾結、組出不符合我們系統架構的複雜指令，產生 hallucination。
-- 這份 repo 的每個 `SKILL.md` 本質上都是**過濾器（Filter）**：把 95% 用不到的進階指令濾掉，只留 5% 最安全、最高頻、最符合團隊規格的精華路徑。
+### 🛠️ Executors
 
-### 3) 為什麼不靠即時 Live Web Search？
+| Skill | 用途 |
+|-------|------|
+| `exec-google-cli` | `gcloud`、Google Sheets API、ADC / scopes |
+| `exec-github-cli` | `gh` for PRs、issues、runs、releases |
+| `exec-cloudflare-cli` | Wrangler、Workers vs Pages deploy |
+| `exec-cloudinary-cli` | `cld`、upload、background removal |
+| `exec-obsidian-cli` | Obsidian URI / `obsidian-cli` |
 
-「要用再去爬官網」聽起來完美，但在 CLI 自動化上會出兩種事：
+### 🧠 Generators
 
-- **時間差**：工程師在終端機下指令期待秒級回應；AI 每步都去 Google + 解析 SPA + 回頭寫程式碼，工具會因為太慢而被團隊拋棄。
-- **網頁結構 / Anti-bot**：官方文件常是 SPA，且有反爬機制（包含 Cloudflare challenge）。爬蟲被擋，自動化流程就卡死在半空中。
+| Skill | 用途 |
+|-------|------|
+| `gen-prd` | 互動式 PRD 生成（多 Persona、多 stage 流程） |
+| `gen-prd-checker` | PRD 對抗性審查（Backend RD / Security / SRE 三鏡頭） |
+| `gen-cto-advisor` | CTO 級決策建議 |
+| `gen-storybook-mockup-gen` | Storybook mockup 生成 |
+| `gen-trello-project-setup` | Trello 專案初始化 |
+| `gen-wport-code-assistant` | wport 編碼助手 |
 
-### 三層金字塔架構（Three-Layer Pyramid）
+---
 
-我們不選擇「全塞」也不選擇「全爬」，而是把 AI 的知識來源切成三層：
+## 設計哲學
 
-| 層級 | 來源 | 負責 |
-|------|------|------|
-| 底層 | AI 內建知識 | 通用 CLI 語法與基本概念（免費、最快） |
-| 中層 | 這份 repo 的 `SKILL.md`（方向盤） | 團隊規範、資安守則、核心高頻指令、操作 SOP |
-| 頂層 | 本地 `--help`（如 `gh pr --help`、`gcloud sheets --help`、`wrangler --help`） | 冷門指令與版本差異——直接讀本地輸出，比爬網路精準、快 10 倍，且永遠符合當前安裝版本 |
+詳細哲學論述見 [`docs/three-layer-pyramid.md`](docs/three-layer-pyramid.md)：
 
-**操作原則**：Skill 文件只寫高頻流程與排錯路徑；遇到冷門子指令，請 AI 在本地跑 `<tool> <subcommand> --help` 取得當前版本的真實輸出，而不是憑記憶或爬網路。
+- 為什麼不把整本 CLI 手冊塞給 AI？（Token 成本 + 延遲）
+- 為什麼不靠 live web search？（時間差 + Anti-bot）
+- **三層金字塔**：AI 內建知識（底）／SKILL.md（中）／`--help`（頂）
+
+---
 
 ## Contributing
 
-- **Do not commit** secrets, API keys, tokens, private key paths, public keys, credential JSON filenames, internal IPs, dashboard URLs, or machine-specific absolute paths.
-- Use placeholders: `<ACCOUNT_EMAIL>`, `<HOST>`, `<PROJECT_NAME>`, `<SPREADSHEET_ID>`, etc.
-- Keep each `SKILL.md` focused on workflows and troubleshooting; put long reference material in sibling files only if needed.
+寫新 skill 之前：
+
+1. 先讀 [`docs/architecture.md`](docs/architecture.md) 判斷 executor / generator 分類
+2. 命名套用前綴規範（`exec-` 或 `gen-`）
+3. 安全紅線：
+   - **Do not commit** secrets、API keys、tokens、credential JSON 檔名、內網 IP、機器絕對路徑
+   - 用 placeholder：`<ACCOUNT_EMAIL>`、`<HOST>`、`<PROJECT_NAME>`、`<SPREADSHEET_ID>`
+
+---
 
 ## Security
 
-If you accidentally commit sensitive data, rotate the affected credentials and rewrite git history before sharing the branch.
+如果意外提交了敏感資料：
+
+1. 立刻 rotate 受影響的 credential
+2. 用 `git filter-repo` 或 `git rebase -i` 重寫歷史
+3. 在分享 branch 前確認 secret 已從 git history 完全清除
