@@ -7,29 +7,38 @@
 
 ## 目標目錄結構
 
-實際的 skill 檔案不在這個 repo，而在 [`prd/.claude/`](../../prd/.claude)：
+Skill 的 **src of truth** 在本 repo 的 `src/`；各專案（如 `prd/`）的 `.claude/` 用 symlink 連回來。
 
 ```text
-prd/
-├── .claude/
-│   ├── exec-google-cli/SKILL.md       # 🛠️ Executor
+wport_skills/                              # 此 repo（src of truth）
+├── src/
+│   ├── exec-google-cli/SKILL.md           # 🛠️ Executor
 │   ├── exec-github-cli/SKILL.md
 │   ├── exec-cloudflare-cli/SKILL.md
 │   ├── exec-cloudinary-cli/SKILL.md
 │   ├── exec-obsidian-cli/SKILL.md
 │   │
-│   ├── gen-prd/SKILL.md               # 🧠 Generator
+│   ├── gen-prd/SKILL.md                   # 🧠 Generator
 │   ├── gen-prd-checker/SKILL.md
 │   ├── gen-cto-advisor/SKILL.md
 │   ├── gen-storybook-mockup-gen/SKILL.md
 │   ├── gen-trello-project-setup/SKILL.md
 │   └── gen-wport-code-assistant/SKILL.md
-│
-└── wport.config.json                  # 專案規則設定檔
+└── docs/
+
+prd/                                       # 各使用此 skill 的專案
+├── .claude/
+│   ├── exec-google-cli → ../../wport_skills/src/exec-google-cli   (symlink)
+│   ├── ...                                                          (symlinks)
+│   └── gen-wport-code-assistant → ../../wport_skills/src/gen-wport-code-assistant
+└── wport.config.json
 ```
 
 > 為什麼採「攤平 + 前綴」而不是 `executors/` / `generators/` 子資料夾？
 > 因為 Claude Code 與 Cursor 預設只掃描 `.claude/<skill-name>/SKILL.md` 一層深度。前綴方案兼顧分類視覺與工具相容性。
+
+> 為什麼用 symlink 而不是把實體放在 `prd/.claude/`？
+> 中央集權：所有專案共用同一個 src of truth，改一次處處生效，不會 drift。詳見 README「為什麼用 symlink」一節。
 
 ---
 
@@ -68,7 +77,7 @@ risk_level: medium    # low / medium / high（牽涉認證/部署都至少 mediu
 
 ### 範本參考
 
-`prd/.claude/exec-google-cli/SKILL.md`、`exec-github-cli/SKILL.md`。
+`src/exec-google-cli/SKILL.md`、`src/exec-github-cli/SKILL.md`。
 
 ---
 
@@ -110,7 +119,7 @@ review_pairing: gen-prd-checker
 
 ### 範本參考
 
-`prd/.claude/gen-prd/SKILL.md`、`gen-prd-checker/SKILL.md`。
+`src/gen-prd/SKILL.md`、`src/gen-prd-checker/SKILL.md`。
 
 ---
 
@@ -150,7 +159,9 @@ Q3：這個 skill 是純查詢 / 純展示？
 
 ## 與 `wport.config.json` 的關係
 
-`prd/wport.config.json` 是 **runtime 設定**（哪個 skill 用什麼 review pairing、business rules 在哪），而本文件是 **撰寫規範**。兩者互補：
+`prd/wport.config.json`（住在使用此 repo 的專案內）是 **runtime 設定**（哪個 skill 用什麼 review pairing、business rules 在哪），而本文件是 **撰寫規範**。兩者互補：
 
 - 想知道**怎麼寫**新 skill → 本文件
-- 想知道 skill **怎麼被執行 / 配對** → `wport.config.json`
+- 想知道 skill **怎麼被執行 / 配對** → 專案內的 `wport.config.json`
+
+> 注意：`wport.config.json` 是專案層級設定（每個專案可有自己的版本），不放在 src of truth `wport_skills` 裡。
